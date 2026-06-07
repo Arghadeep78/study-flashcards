@@ -1,0 +1,13 @@
+{
+  "name": "dsa-flashcards",
+  "version": "1.0.0",
+  "scripts": {
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm run dev",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "devall": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}
