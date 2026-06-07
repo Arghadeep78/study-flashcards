@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Pencil, Trash2, Copy, ExternalLink, Upload, Download, Braces, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import useCardStore from '../store/useCardStore.js';
+import useSettings from '../store/useSettings.js';
 import { DifficultyBadge, TopicBadge } from '../components/ui/Badge.jsx';
 import Button from '../components/ui/Button.jsx';
 import CardDetailModal from '../components/ui/CardDetailModal.jsx';
@@ -371,15 +372,20 @@ export default function AllCards() {
 }
 
 function CardRow({ card, onView, onEdit, onDelete, onDuplicate }) {
+  const confirmDelete = useSettings((s) => s.confirmDelete);
   const [confirming, setConfirming] = useState(false);
 
   const handleDelete = (e) => {
     e.stopPropagation();
+    if (!confirmDelete) { onDelete(); return; } // one-click delete when confirmation is disabled
     if (confirming) { onDelete(); setConfirming(false); }
     else { setConfirming(true); setTimeout(() => setConfirming(false), 2500); }
   };
 
-  const isDue = card.nextReview && new Date(card.nextReview) <= new Date();
+  // Leitner due check: thresholds (days) per box, unseen cards are always due.
+  const BOX_THRESHOLD_DAYS = { 0: 0, 1: 3, 2: 7 };
+  const daysSince = card.lastReviewed ? (Date.now() - new Date(card.lastReviewed).getTime()) / 86_400_000 : Infinity;
+  const isDue = !card.archived && daysSince >= (BOX_THRESHOLD_DAYS[card.boxLevel] ?? 0);
 
   return (
     <div

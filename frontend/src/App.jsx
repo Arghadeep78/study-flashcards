@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import useSettings from './store/useSettings.js';
 import Layout from './components/layout/Layout.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import AllCards from './pages/AllCards.jsx';
@@ -11,6 +13,16 @@ import WeakCards from './pages/WeakCards.jsx';
 import Settings from './pages/Settings.jsx';
 
 export default function App() {
+  const theme = useSettings(state => state.theme);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
   return (
     <Routes>
       <Route element={<Layout />}>

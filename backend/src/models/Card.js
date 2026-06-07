@@ -17,17 +17,15 @@ const cardSchema = new mongoose.Schema({
   question: { type: String, default: '' },
   approaches: { type: [approachSchema], default: () => [] },
   notes: { type: String, default: '' },
-  nextReview: { type: Date, default: () => new Date() },
+  boxLevel: { type: Number, default: 0, min: 0, max: 2 },
+  archived: { type: Boolean, default: false },
   lastReviewed: { type: Date, default: null },
-  reviewCount: { type: Number, default: 0 },
-  easeFactor: { type: Number, default: 2.5 },
-  interval: { type: Number, default: 1 },
   weak: { type: Boolean, default: false },
   visitCount: { type: Number, default: 0 },
 }, { timestamps: true });
 
 cardSchema.index({ title: 'text', topic: 'text' });
 cardSchema.index({ topic: 1 });
-cardSchema.index({ nextReview: 1 });
+cardSchema.index({ archived: 1, boxLevel: 1, lastReviewed: 1 });
 
 export default mongoose.model('Card', cardSchema);

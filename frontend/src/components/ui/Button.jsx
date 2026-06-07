@@ -1,14 +1,14 @@
 const variants = {
-  primary: 'bg-emerald-600 hover:bg-emerald-500 text-white',
-  secondary: 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700',
-  danger: 'bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20',
-  ghost: 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200',
+  primary: 'bg-flat-blue-500 hover:bg-flat-blue-600 text-white shadow-sm',
+  secondary: 'bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200',
+  danger: 'bg-flat-red-500 hover:bg-flat-red-600 text-white shadow-sm',
+  ghost: 'hover:bg-zinc-100 text-zinc-600 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200',
 };
 
 export default function Button({ variant = 'secondary', className = '', children, ...props }) {
   return (
     <button
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${variants[variant]} ${className}`}
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`}
       {...props}
     >
       {children}

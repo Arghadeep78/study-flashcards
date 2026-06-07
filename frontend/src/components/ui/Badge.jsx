@@ -1,12 +1,12 @@
 const difficultyColors = {
-  Easy: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-  Medium: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
-  Hard: 'bg-red-500/10 text-red-400 border border-red-500/20',
+  Easy: 'bg-flat-green-500 text-white',
+  Medium: 'bg-flat-yellow-500 text-white',
+  Hard: 'bg-flat-red-500 text-white',
 };
 
 export function DifficultyBadge({ difficulty }) {
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${difficultyColors[difficulty] ?? 'bg-zinc-700 text-zinc-300'}`}>
+    <span className={`text-[11px] px-2.5 py-1 rounded shadow-sm font-bold uppercase tracking-wider ${difficultyColors[difficulty] ?? 'bg-zinc-500 text-white'}`}>
       {difficulty}
     </span>
   );
@@ -14,7 +14,7 @@ export function DifficultyBadge({ difficulty }) {
 
 export function TopicBadge({ topic }) {
   return (
-    <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
+    <span className="text-[11px] px-2.5 py-1 rounded shadow-sm bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200 font-bold uppercase tracking-wider">
       {topic}
     </span>
   );

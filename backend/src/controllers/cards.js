@@ -94,11 +94,9 @@ export const duplicateCard = async (req, res) => {
     const { _id, createdAt, updatedAt, ...rest } = original.toObject();
     const data = migrateApproaches(rest);
     data.title = `${data.title} (Copy)`;
-    data.nextReview = new Date();
+    data.boxLevel = 0;
+    data.archived = false;
     data.lastReviewed = null;
-    data.reviewCount = 0;
-    data.interval = 1;
-    data.easeFactor = 2.5;
 
     const copy = await Card.create(data);
     res.status(201).json(copy);
@@ -107,54 +105,34 @@ export const duplicateCard = async (req, res) => {
   }
 };
 
-// SM-2 spaced repetition: quality 0-5 mapped from ratings
-// hard=3 (pass with difficulty, no reset), again=0 (fail, reset)
-const QUALITY_MAP = { again: 0, hard: 3, good: 4, easy: 5 };
-const MIN_EASE = 1.3;
-
-function sm2(card, quality) {
-  let { easeFactor, interval } = card;
-
-  if (quality < 3) {
-    // failed — restart learning sequence
-    interval = 1;
-  } else {
-    // passed — standard SM-2 bootstrapping then graduated intervals
-    if (card.reviewCount === 0) {
-      interval = quality === 3 ? 1 : 1; // first pass: 1 day regardless
-    } else if (card.reviewCount === 1) {
-      interval = quality === 3 ? 4 : 6; // hard on 2nd review: shorter gap
-    } else {
-      interval = Math.round(interval * (quality === 3 ? 1.2 : easeFactor));
-    }
-  }
-
-  easeFactor = Math.max(MIN_EASE, easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-
-  return { interval, easeFactor };
-}
+// Deadline-driven Leitner box system.
+// Boxes 0..2; "due" once enough days have elapsed since the last review.
+const FINAL_BOX = 2;
+// Threshold in days before a card in a given box becomes due again.
+const BOX_THRESHOLD_DAYS = { 0: 0, 1: 3, 2: 7 };
+const MS_PER_DAY = 86_400_000;
 
 export const reviewCard = async (req, res) => {
   try {
-    const { rating } = req.body; // 'again' | 'hard' | 'good' | 'easy'
+    const { rating } = req.body; // 'pass' (Correct) | 'fail' (Missed)
     const card = await Card.findById(req.params.id);
     if (!card) return res.status(404).json({ error: 'Card not found' });
 
-    const quality = QUALITY_MAP[rating] ?? 0;
-    const { interval, easeFactor } = sm2(card, quality);
+    const passed = rating === 'pass';
+    const update = { lastReviewed: new Date(), $inc: { visitCount: 1 } };
 
-    const nextReview = new Date();
-    nextReview.setDate(nextReview.getDate() + interval);
+    if (!passed) {
+      // Missed — drop back to box 0.
+      update.boxLevel = 0;
+    } else if (card.boxLevel < FINAL_BOX) {
+      // Correct — promote to the next box.
+      update.boxLevel = card.boxLevel + 1;
+    } else {
+      // Correct on the final box — graduate / archive the card.
+      update.archived = true;
+    }
 
-    // auto-clear weak flag once the card has graduated (easeFactor improving, interval > 7)
-    const autoUnweak = card.weak && quality >= 4 && interval > 7;
-
-    const updated = await Card.findByIdAndUpdate(
-      req.params.id,
-      { interval, easeFactor, nextReview, lastReviewed: new Date(), $inc: { reviewCount: 1, visitCount: 1 }, ...(autoUnweak && { weak: false }) },
-      { new: true }
-    );
-
+    const updated = await Card.findByIdAndUpdate(req.params.id, update, { new: true });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -163,23 +141,24 @@ export const reviewCard = async (req, res) => {
 
 export const getDueCards = async (req, res) => {
   try {
-    const now = new Date();
-    const cards = await Card.find({ nextReview: { $lte: now } }).lean();
+    const now = Date.now();
 
-    // Priority: lapsed cards (interval=1 after a fail, easeFactor dropped) first,
-    // then review cards. Shuffle within each bucket so ordering isn't deterministic.
-    const shuffle = (arr) => {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    };
+    // A card is due when its box threshold has elapsed since lastReviewed.
+    // Box 0 (threshold 0) is always due; unseen cards (lastReviewed: null) are due in any box.
+    // Legacy cards may have a missing boxLevel — treat that as box 0 (always due).
+    const boxMatch = (box) => (box === 0 ? { boxLevel: { $in: [0, null] } } : { boxLevel: box });
+    const orClauses = Object.entries(BOX_THRESHOLD_DAYS).map(([box, days]) => {
+      const cutoff = new Date(now - days * MS_PER_DAY);
+      return days === 0
+        ? boxMatch(Number(box))
+        : { ...boxMatch(Number(box)), $or: [{ lastReviewed: null }, { lastReviewed: { $lte: cutoff } }] };
+    });
 
-    const lapsed = shuffle(cards.filter((c) => c.interval === 1 && c.reviewCount > 1));
-    const reviews = shuffle(cards.filter((c) => !(c.interval === 1 && c.reviewCount > 1)));
+    const cards = await Card.find({ archived: { $ne: true }, $or: orClauses })
+      .sort({ boxLevel: 1, lastReviewed: 1 })
+      .lean();
 
-    res.json([...lapsed, ...reviews]);
+    res.json(cards);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -201,21 +180,25 @@ export const getTopics = async (req, res) => {
   }
 };
 
-// Weighted sampling without replacement.
-// Weight = e^(-daysSinceLastReview / HALF_LIFE) inverted:
-// never-reviewed cards get weight 1.0 (max), recently reviewed get lower weight.
-// Cards last reviewed 30 days ago get ~0.37, 60 days ago ~0.14 — long-unseen cards surface more.
-const HALF_LIFE = 30;
+// Weighted sampling without replacement. Final weight combines two factors:
+//   recencyWeight = 1 - e^(-daysSinceLastReview / HALF_LIFE)
+//     never-reviewed cards get 1.0 (max), recently reviewed get lower weight.
+//     With HALF_LIFE = 7, a card seen 7 days ago is ~0.63, yesterday ~0.13.
+//   scarcityWeight = 1 / (visitCount + 1)
+//     unseen cards get 1.0, each prior visit halves/thirds/quarters their pull.
+// finalWeight = recencyWeight * scarcityWeight — surfaces new/lesser-seen cards aggressively.
+const HALF_LIFE = 7;
 
 function weightedSample(pool, count) {
   if (pool.length <= count) return pool;
   const now = Date.now();
 
   const weights = pool.map((c) => {
-    if (!c.lastReviewed) return 1; // never reviewed — highest priority
-    const daysSince = (now - new Date(c.lastReviewed).getTime()) / 86_400_000;
-    // invert: longer ago = higher weight
-    return 1 - Math.exp(-daysSince / HALF_LIFE);
+    const scarcityWeight = 1 / ((c.visitCount ?? 0) + 1);
+    const recencyWeight = c.lastReviewed
+      ? 1 - Math.exp(-((now - new Date(c.lastReviewed).getTime()) / 86_400_000) / HALF_LIFE)
+      : 1; // never reviewed — max recency priority
+    return recencyWeight * scarcityWeight;
   });
 
   const selected = [];
@@ -251,17 +234,23 @@ export const getRandomCards = async (req, res) => {
 export const getSelectiveCards = async (req, res) => {
   try {
     const { topics, subtopics, count } = req.body;
-    const query = {};
-    if (topics?.length) query.topic = { $in: topics };
-    if (subtopics?.length) query.subtopic = { $in: subtopics };
+    const match = { archived: false };
+    if (topics?.length) match.topic = { $in: topics };
+    if (subtopics?.length) match.subtopic = { $in: subtopics };
 
     const wantAll = !count || parseInt(count) === 0;
     const limit = wantAll ? null : Math.min(parseInt(count), 2000);
 
+    // Pattern-focused pool: unseen cards first, then longest-unseen — so the
+    // sampler operates on the newest/lesser-seen cards within the selected pattern.
+    const pipeline = [
+      { $match: match },
+      { $addFields: { isUnseen: { $cond: [{ $eq: ['$visitCount', 0] }, 1, 0] } } },
+      { $sort: { isUnseen: -1, lastReviewed: 1 } },
+    ];
     // fetch a larger pool so weighting has room to work; for "All" take everything
-    const poolSize = limit ? limit * 5 : null;
-    const pipeline = [{ $match: query }];
-    if (poolSize) pipeline.push({ $sample: { size: poolSize } });
+    if (limit) pipeline.push({ $limit: limit * 5 });
+    pipeline.push({ $unset: 'isUnseen' }); // drop the temporary sort field before returning
     const pool = await Card.aggregate(pipeline);
 
     res.json(weightedSample(pool, limit ?? pool.length));
@@ -272,8 +261,8 @@ export const getSelectiveCards = async (req, res) => {
 
 export const getWeakCards = async (req, res) => {
   try {
-    // sort by easeFactor asc — worst ease first, then by lastReviewed asc for untouched cards
-    const cards = await Card.find({ weak: true }).sort({ easeFactor: 1, lastReviewed: 1 });
+    // sort by boxLevel asc — least-mastered first, then by lastReviewed asc for untouched cards
+    const cards = await Card.find({ weak: true }).sort({ boxLevel: 1, lastReviewed: 1 });
     res.json(cards);
   } catch (err) {
     res.status(500).json({ error: err.message });
