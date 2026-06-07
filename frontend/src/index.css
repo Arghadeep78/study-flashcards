@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+    @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
   }
 
   ::-webkit-scrollbar {

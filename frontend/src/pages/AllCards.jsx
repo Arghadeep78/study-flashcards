@@ -139,23 +139,23 @@ function BulkImportModal({ onClose, onImport }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center gap-2">
             <Braces size={16} className="text-emerald-400" />
-            <h2 className="text-sm font-semibold text-zinc-100">Bulk Add Cards (JSON)</h2>
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Bulk Add Cards (JSON)</h2>
           </div>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors"><X size={16} /></button>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-800 dark:text-zinc-200 transition-colors"><X size={16} /></button>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="text-xs text-zinc-500 space-y-1">
-              <p>Paste a JSON array of cards. Required: <code className="text-zinc-300">title</code>, <code className="text-zinc-300">topic</code>, <code className="text-zinc-300">difficulty</code>.</p>
-              <p>Optional: <code className="text-zinc-300">subtopic</code>, <code className="text-zinc-300">problemLink</code>, <code className="text-zinc-300">question</code>, <code className="text-zinc-300">approaches</code>, <code className="text-zinc-300">notes</code>.</p>
-              <p><code className="text-zinc-300">approaches</code> is an array — any number, any names. Each has <code className="text-zinc-300">label</code>, <code className="text-zinc-300">approach</code>, <code className="text-zinc-300">timeComplexity</code>, <code className="text-zinc-300">spaceComplexity</code>, <code className="text-zinc-300">code</code>.</p>
+              <p>Paste a JSON array of cards. Required: <code className="text-zinc-700 dark:text-zinc-300">title</code>, <code className="text-zinc-700 dark:text-zinc-300">topic</code>, <code className="text-zinc-700 dark:text-zinc-300">difficulty</code>.</p>
+              <p>Optional: <code className="text-zinc-700 dark:text-zinc-300">subtopic</code>, <code className="text-zinc-700 dark:text-zinc-300">problemLink</code>, <code className="text-zinc-700 dark:text-zinc-300">question</code>, <code className="text-zinc-700 dark:text-zinc-300">approaches</code>, <code className="text-zinc-700 dark:text-zinc-300">notes</code>.</p>
+              <p><code className="text-zinc-700 dark:text-zinc-300">approaches</code> is an array — any number, any names. Each has <code className="text-zinc-700 dark:text-zinc-300">label</code>, <code className="text-zinc-700 dark:text-zinc-300">approach</code>, <code className="text-zinc-700 dark:text-zinc-300">timeComplexity</code>, <code className="text-zinc-700 dark:text-zinc-300">spaceComplexity</code>, <code className="text-zinc-700 dark:text-zinc-300">code</code>.</p>
             </div>
             <button
               type="button"
@@ -171,7 +171,7 @@ function BulkImportModal({ onClose, onImport }) {
             onChange={(e) => { setJson(e.target.value); setError(''); }}
             placeholder="Paste your JSON array here..."
             rows={16}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600 resize-none"
+            className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-xs font-mono text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600 resize-none"
           />
 
           {error && (
@@ -180,7 +180,7 @@ function BulkImportModal({ onClose, onImport }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-4 border-t border-zinc-800 gap-3">
+        <div className="flex items-center justify-between px-5 py-4 border-t border-zinc-200 dark:border-zinc-800 gap-3">
           <p className="text-xs text-zinc-600">
             {json.trim() ? (() => { try { const a = JSON.parse(json); return Array.isArray(a) ? `${a.length} card${a.length !== 1 ? 's' : ''} detected` : ''; } catch { return ''; } })() : ''}
           </p>
@@ -256,7 +256,7 @@ export default function AllCards() {
       {selectedCard && <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />}
 
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-zinc-100">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
           All Cards <span className="text-zinc-600 text-lg font-normal">({total})</span>
         </h1>
         <div className="flex gap-2">
@@ -285,7 +285,7 @@ export default function AllCards() {
             placeholder="Search by title or topic..."
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-8 pr-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
+            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-8 pr-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
           />
         </div>
 
@@ -293,7 +293,7 @@ export default function AllCards() {
         <select
           value={filters.topic}
           onChange={handleTopicChange}
-          className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-emerald-600"
+          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-emerald-600"
         >
           <option value="">All Topics</option>
           {topics.map((t) => {
@@ -307,7 +307,7 @@ export default function AllCards() {
           <select
             value={filters.subtopic ?? ''}
             onChange={(e) => handleFilterChange('subtopic', e.target.value)}
-            className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-emerald-600"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-emerald-600"
           >
             <option value="">All Subtopics</option>
             {subtopics.map((st) => <option key={st} value={st}>{st}</option>)}
@@ -318,7 +318,7 @@ export default function AllCards() {
         <select
           value={filters.difficulty}
           onChange={(e) => handleFilterChange('difficulty', e.target.value)}
-          className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-emerald-600"
+          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-emerald-600"
         >
           <option value="">All Difficulties</option>
           {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -351,7 +351,7 @@ export default function AllCards() {
           <button
             onClick={() => setPage(page - 1)}
             disabled={page <= 1}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft size={16} />
           </button>
@@ -361,7 +361,7 @@ export default function AllCards() {
           <button
             onClick={() => setPage(page + 1)}
             disabled={page >= pages}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronRight size={16} />
           </button>
@@ -390,11 +390,11 @@ function CardRow({ card, onView, onEdit, onDelete, onDuplicate }) {
   return (
     <div
       onClick={onView}
-      className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex items-center gap-3 hover:border-zinc-700 hover:bg-zinc-800/50 transition-colors group cursor-pointer"
+      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 flex items-center gap-3 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors group cursor-pointer"
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-zinc-100 truncate">{card.title}</span>
+          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{card.title}</span>
           {isDue && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Due</span>}
           {card.weak && <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">Weak</span>}
         </div>

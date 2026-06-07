@@ -31,7 +31,7 @@ export default function WeakCards() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Flag size={20} className="text-red-400" />
-          <h1 className="text-2xl font-bold text-zinc-100">Weak Cards
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Weak Cards
             <span className="text-zinc-600 text-lg font-normal ml-2">({cards?.length ?? '…'})</span>
           </h1>
         </div>
@@ -54,10 +54,10 @@ export default function WeakCards() {
 
       <div className="space-y-2">
         {cards?.map((card) => (
-          <div key={card._id} className="bg-zinc-900 border border-red-500/10 rounded-xl px-4 py-3 flex items-center gap-3 group hover:border-red-500/20 transition-colors">
+          <div key={card._id} className="bg-white dark:bg-zinc-900 border border-red-500/10 rounded-xl px-4 py-3 flex items-center gap-3 group hover:border-red-500/20 transition-colors">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-zinc-100 truncate">{card.title}</span>
+                <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{card.title}</span>
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <TopicBadge topic={card.subtopic ? `${card.topic} › ${card.subtopic}` : card.topic} />

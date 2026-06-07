@@ -95,23 +95,23 @@ function TopicSelect({ value, onChange }) {
       <button
         type="button"
         onClick={() => { setOpen((o) => !o); setFilter(''); }}
-        className="w-full flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-left focus:outline-none focus:border-emerald-600 hover:border-zinc-700 transition-colors"
+        className="w-full flex items-center justify-between bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-left focus:outline-none focus:border-emerald-600 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
       >
-        <span className={value ? 'text-zinc-200' : 'text-zinc-600'}>{value || 'Select topic...'}</span>
+        <span className={value ? 'text-zinc-800 dark:text-zinc-200' : 'text-zinc-600'}>{value || 'Select topic...'}</span>
         <ChevronDown size={14} className={`text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl shadow-xl overflow-hidden">
           {/* Search */}
-          <div className="p-2 border-b border-zinc-800">
+          <div className="p-2 border-b border-zinc-200 dark:border-zinc-800">
             <input
               autoFocus
               type="text"
               placeholder="Search topics..."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full bg-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none"
+              className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
             />
           </div>
 
@@ -124,7 +124,7 @@ function TopicSelect({ value, onChange }) {
               <div
                 key={t}
                 onClick={() => { onChange(t); setOpen(false); }}
-                className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors ${value === t ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-300 hover:bg-zinc-800'}`}
+                className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors ${value === t ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
               >
                 <span>{t}</span>
                 {customTopics.includes(t) && (
@@ -141,14 +141,14 @@ function TopicSelect({ value, onChange }) {
           </div>
 
           {/* Add new */}
-          <div className="p-2 border-t border-zinc-800 flex gap-2">
+          <div className="p-2 border-t border-zinc-200 dark:border-zinc-800 flex gap-2">
             <input
               type="text"
               placeholder="Add new topic..."
               value={newTopic}
               onChange={(e) => setNewTopic(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomTopic())}
-              className="flex-1 bg-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none"
+              className="flex-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
             />
             <button
               type="button"
@@ -169,20 +169,20 @@ function ApproachSection({ value, onChange, onRemove }) {
   const [open, setOpen] = useState(!!value.approach || !!value.code);
   const patch = (key) => (v) => onChange({ ...value, [key]: v });
   return (
-    <div className="border border-zinc-800 rounded-xl overflow-hidden">
-      <div className="flex items-center bg-zinc-900 border-b border-zinc-800 group">
+    <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+      <div className="flex items-center bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 group">
         <GripVertical size={14} className="text-zinc-700 ml-3 shrink-0" />
         <input
           type="text"
           value={value.label}
           onChange={(e) => onChange({ ...value, label: e.target.value })}
           placeholder="Approach name"
-          className="flex-1 bg-transparent px-3 py-3 text-sm font-medium text-zinc-300 placeholder:text-zinc-600 focus:outline-none"
+          className="flex-1 bg-transparent px-3 py-3 text-sm font-medium text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
         />
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="px-3 py-3 text-zinc-500 hover:text-zinc-300 transition-colors"
+          className="px-3 py-3 text-zinc-500 hover:text-zinc-700 dark:text-zinc-300 transition-colors"
         >
           {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
         </button>
@@ -196,7 +196,7 @@ function ApproachSection({ value, onChange, onRemove }) {
         </button>
       </div>
       {open && (
-        <div className="px-4 pb-4 pt-3 space-y-3 bg-zinc-900/50">
+        <div className="px-4 pb-4 pt-3 space-y-3 bg-white dark:bg-zinc-900/50">
           <TextArea label="Approach / Explanation" value={value.approach} onChange={patch('approach')} rows={3} />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Time Complexity" value={value.timeComplexity} onChange={patch('timeComplexity')} placeholder="O(n)" />
@@ -216,7 +216,7 @@ function Input({ label, value, onChange, placeholder, required }) {
       <input
         type="text" value={value} onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder} required={required}
-        className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
+        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
       />
     </div>
   );
@@ -228,7 +228,7 @@ function TextArea({ label, value, onChange, rows = 4, mono }) {
       {label && <label className="block text-xs text-zinc-500 mb-1">{label}</label>}
       <textarea
         value={value} onChange={(e) => onChange(e.target.value)} rows={rows}
-        className={`w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600 resize-y ${mono ? 'font-mono' : ''}`}
+        className={`w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600 resize-y ${mono ? 'font-mono' : ''}`}
       />
     </div>
   );
@@ -239,7 +239,7 @@ function Select({ label, value, onChange, options, required }) {
     <div>
       <label className="block text-xs text-zinc-500 mb-1">{label}{required && ' *'}</label>
       <select value={value} onChange={(e) => onChange(e.target.value)} required={required}
-        className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-emerald-600"
+        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-emerald-600"
       >
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
@@ -414,23 +414,23 @@ export default function CardForm() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-zinc-500 hover:text-zinc-200 transition-colors">
+        <button onClick={() => navigate(-1)} className="text-zinc-500 hover:text-zinc-800 dark:text-zinc-200 transition-colors">
           <ArrowLeft size={18} />
         </button>
-        <h1 className="text-2xl font-bold text-zinc-100">{isEdit ? 'Edit Card' : 'New Card'}</h1>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{isEdit ? 'Edit Card' : 'New Card'}</h1>
         {!isEdit && (
-          <div className="ml-auto flex items-center gap-1 bg-zinc-800 rounded-lg p-1">
+          <div className="ml-auto flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
             <button
               type="button"
               onClick={() => setMode('form')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mode === 'form' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mode === 'form' ? 'bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-300'}`}
             >
               <LayoutList size={13} /> Form
             </button>
             <button
               type="button"
               onClick={() => { setMode('json'); setJsonError(''); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mode === 'json' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mode === 'json' ? 'bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-300'}`}
             >
               <Braces size={13} /> JSON
             </button>
@@ -447,13 +447,13 @@ export default function CardForm() {
 
       {mode === 'json' && (
         <div className="space-y-3">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Paste Card JSON</h2>
               <button
                 type="button"
                 onClick={() => { setJsonText(JSON_TEMPLATE); setJsonError(''); }}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-300 transition-colors"
               >
                 Reset to template
               </button>
@@ -463,7 +463,7 @@ export default function CardForm() {
               onChange={(e) => { setJsonText(e.target.value); setJsonError(''); }}
               rows={22}
               spellCheck={false}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600 resize-y"
+              className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-xs font-mono text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600 resize-y"
             />
             {jsonError && (
               <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{jsonError}</p>
@@ -480,7 +480,7 @@ export default function CardForm() {
 
       <form onSubmit={handleSubmit} className={`space-y-5 ${mode === 'json' ? 'hidden' : ''}`}>
         {/* Basic Info */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 space-y-4">
           <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Basic Info</h2>
           <Input label="Title" value={form.title} onChange={set('title')} required placeholder="Two Sum" />
           <div className="grid grid-cols-2 gap-4">
@@ -492,7 +492,7 @@ export default function CardForm() {
         </div>
 
         {/* Question */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 space-y-3">
           <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Problem Statement</h2>
           <TextArea value={form.question} onChange={set('question')} rows={5} placeholder="Describe the problem..." />
         </div>
@@ -523,7 +523,7 @@ export default function CardForm() {
         </div>
 
         {/* Notes */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 space-y-3">
           <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Notes</h2>
           <TextArea value={form.notes} onChange={set('notes')} rows={3} placeholder="Key patterns, tips, tricky parts..." />
         </div>

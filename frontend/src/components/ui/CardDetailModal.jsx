@@ -106,7 +106,7 @@ export default function CardDetailModal({ card, onClose }) {
                 className={`px-5 py-2.5 text-sm font-bold transition-all rounded-t-lg border-b-4 
                   ${activeTab === tab.key
                     ? 'border-flat-blue-500 text-flat-blue-600 dark:text-flat-blue-400 bg-white dark:bg-zinc-800/80 shadow-sm'
-                    : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50'}`}
+                    : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50'}`}
               >
                 {tab.label}
               </button>
@@ -166,7 +166,7 @@ function ApproachContent({ approach }) {
           return (
             <button key={t.key} onClick={() => setSubTab(t.key)}
               className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all
-                ${isActive ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'}`}>
+                ${isActive ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-800 dark:text-zinc-200'}`}>
               {t.label}
             </button>
           );

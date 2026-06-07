@@ -15,10 +15,10 @@ export default function CodeBlock({ code }) {
   };
 
   return (
-    <div className="relative rounded-lg overflow-hidden border border-zinc-800 text-sm">
+    <div className="relative rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 text-sm">
       <button
         onClick={handleCopy}
-        className="absolute top-2 right-2 z-10 p-1.5 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors"
+        className="absolute top-2 right-2 z-10 p-1.5 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 transition-colors"
         title="Copy"
       >
         {copied ? <Check size={13} /> : <Copy size={13} />}

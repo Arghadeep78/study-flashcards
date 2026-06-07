@@ -22,7 +22,7 @@ function Row({ title, desc, children }) {
   return (
     <div className="flex items-center justify-between gap-6">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-zinc-200">{title}</p>
+        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{title}</p>
         {desc && <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>}
       </div>
       <div className="shrink-0">{children}</div>
@@ -53,10 +53,10 @@ export default function Settings() {
 
   return (
     <div className="max-w-xl mx-auto space-y-8 pb-12">
-      <h1 className="text-2xl font-bold text-zinc-100">Settings</h1>
+      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Settings</h1>
 
       {/* Review */}
-      <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-5">
+      <section className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 space-y-5">
         <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Review</h2>
 
         <Row title="Daily Review Target" desc="Number of cards you aim to review each day">
@@ -66,7 +66,7 @@ export default function Settings() {
             max={200}
             value={dailyTarget}
             onChange={handleTarget}
-            className="w-20 text-center bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-emerald-600"
+            className="w-20 text-center bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-emerald-600"
           />
         </Row>
 
@@ -80,18 +80,18 @@ export default function Settings() {
       </section>
 
       {/* Appearance */}
-      <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-5">
+      <section className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 space-y-5">
         <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Appearance</h2>
 
         <Row title="Theme" desc="Switch between light and dark mode">
-          <div className="flex gap-1 p-0.5 bg-zinc-950/60 border border-zinc-800 rounded-lg">
+          <div className="flex gap-1 p-0.5 bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-lg">
             {[['light', 'Light', Sun], ['dark', 'Dark', Moon]].map(([val, label, Icon]) => {
               const active = theme === val;
               return (
                 <button
                   key={val}
                   onClick={() => setSetting('theme', val)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${active ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${active ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-300'}`}
                 >
                   <Icon size={13} /> {label}
                 </button>
@@ -102,7 +102,7 @@ export default function Settings() {
       </section>
 
       {/* Behaviour */}
-      <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-5">
+      <section className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 space-y-5">
         <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Behaviour</h2>
 
         <Row title="Confirm before deleting" desc="Require a second click on the delete button">
@@ -111,7 +111,7 @@ export default function Settings() {
       </section>
 
       {/* Data */}
-      <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-5">
+      <section className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 space-y-5">
         <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Data</h2>
 
         <Row title="Export deck" desc="Download all cards as a JSON file">
@@ -125,7 +125,7 @@ export default function Settings() {
       </section>
 
       {/* Reference: Leitner box thresholds */}
-      <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 space-y-4">
         <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Leitner Box System</h2>
         <p className="text-xs text-zinc-500">
           Answer <span className="text-emerald-400 font-medium">Correct</span> to promote a card to the next box;
@@ -133,7 +133,7 @@ export default function Settings() {
         </p>
         <div className="grid grid-cols-3 gap-3 text-sm">
           {[['Box 0', 'Today', 'text-red-400'], ['Box 1', '3 days', 'text-amber-400'], ['Box 2', '7 days', 'text-emerald-400']].map(([label, days, cls]) => (
-            <div key={label} className="flex flex-col items-center gap-1 bg-zinc-800 rounded-lg px-4 py-3">
+            <div key={label} className="flex flex-col items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg px-4 py-3">
               <span className={`font-semibold ${cls}`}>{label}</span>
               <span className="text-zinc-400 text-xs">{days}</span>
             </div>

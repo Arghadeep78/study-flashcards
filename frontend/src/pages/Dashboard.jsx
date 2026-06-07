@@ -22,11 +22,11 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-12 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-zinc-800 dark:text-zinc-100 font-sans tracking-tight">Dashboard</h1>
-          <p className="text-sm font-semibold text-zinc-500 mt-1">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <h1 className="text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Dashboard</h1>
+          <p className="text-sm font-bold text-slate-500 mt-2">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
         <Button variant="primary" onClick={() => navigate('/review/daily')}>
           <CalendarCheck size={18} />
@@ -41,14 +41,14 @@ export default function Dashboard() {
       </div>
 
       {stats && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 space-y-4 shadow-sm transition-colors duration-200">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 space-y-6 shadow-soft transition-colors duration-300">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">Daily target progress</span>
-            <span className="font-mono font-bold text-zinc-800 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-md">{stats.reviewedToday} / {dailyTarget}</span>
+            <span className="font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Daily target progress</span>
+            <span className="font-mono font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-4 py-1.5 rounded-full">{stats.reviewedToday} / {dailyTarget}</span>
           </div>
-          <div className="h-3 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden shadow-inner">
+          <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
             <div
-              className="h-full bg-flat-green-500 rounded-full transition-all duration-500"
+              className="h-full bg-flat-green-500 rounded-full transition-all duration-1000 ease-out"
               style={{ width: `${Math.min(100, (stats.reviewedToday / dailyTarget) * 100)}%` }}
             />
           </div>
@@ -59,17 +59,17 @@ export default function Dashboard() {
       )}
 
       {stats?.topicDistribution?.length > 0 && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl p-6 transition-colors duration-200">
-          <h2 className="text-sm font-bold text-zinc-500 mb-6 uppercase tracking-wider">Cards by Topic</h2>
-          <ResponsiveContainer width="100%" height={260}>
+        <div className="bg-white dark:bg-slate-900 shadow-soft rounded-3xl p-8 transition-colors duration-300">
+          <h2 className="text-sm font-extrabold text-slate-500 mb-8 uppercase tracking-widest">Cards by Topic</h2>
+          <ResponsiveContainer width="100%" height={300}>
             <BarChart data={stats.topicDistribution} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <XAxis dataKey="topic" tick={{ fill: theme === 'dark' ? '#71717a' : '#a1a1aa', fontSize: 13, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: theme === 'dark' ? '#71717a' : '#a1a1aa', fontSize: 13, fontWeight: 'bold' }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <XAxis dataKey="topic" tick={{ fill: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 13, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 13, fontWeight: 'bold' }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip
-                contentStyle={{ background: theme === 'dark' ? '#18181b' : '#ffffff', border: theme === 'dark' ? '1px solid #27272a' : '1px solid #e4e4e7', borderRadius: 8, fontSize: 13, fontWeight: 'bold', color: theme === 'dark' ? '#fff' : '#000' }}
-                cursor={{ fill: theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}
+                contentStyle={{ background: theme === 'dark' ? '#0f172a' : '#ffffff', border: 'none', borderRadius: 16, fontSize: 13, fontWeight: 'bold', color: theme === 'dark' ? '#fff' : '#000', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)' }}
+                cursor={{ fill: theme === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}
               />
-              <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="count" radius={[8, 8, 8, 8]}>
                 {stats.topicDistribution.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
@@ -80,10 +80,10 @@ export default function Dashboard() {
       )}
 
       {stats?.total === 0 && (
-        <div className="text-center py-20 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 transition-colors duration-200">
-          <BookOpen size={48} className="mx-auto mb-4 text-zinc-300 dark:text-zinc-600" />
-          <p className="text-xl font-bold text-zinc-600 dark:text-zinc-400">No cards yet</p>
-          <p className="text-sm mt-2 text-zinc-500 mb-6 font-medium">Create your first flashcard to get started.</p>
+        <div className="text-center py-24 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 transition-colors duration-300">
+          <BookOpen size={64} className="mx-auto mb-6 text-slate-300 dark:text-slate-700" />
+          <p className="text-2xl font-black text-slate-700 dark:text-slate-300 tracking-tight">No cards yet</p>
+          <p className="text-base mt-3 text-slate-500 mb-8 font-medium">Create your first flashcard to get started.</p>
           <Button variant="primary" onClick={() => navigate('/cards/new')}>
             Create Card
           </Button>
