@@ -5,164 +5,13 @@ import useCardStore from '../store/useCardStore.js';
 import { cardsApi } from '../utils/api.js';
 import Button from '../components/ui/Button.jsx';
 import toast from 'react-hot-toast';
+import CreatableSelect from '../components/ui/CreatableSelect.jsx';
 
 const DEFAULT_TOPICS = [
   'Arrays', 'Strings', 'Linked List', 'Stacks & Queues', 'Trees', 'Graphs',
   'Dynamic Programming', 'Greedy', 'Binary Search', 'Backtracking', 'Heap',
   'Trie', 'Sliding Window', 'Two Pointers', 'Math', 'Bit Manipulation', 'Other',
 ];
-
-const TOPICS_KEY = 'dsa_custom_topics';
-
-function loadCustomTopics() {
-  try { return JSON.parse(localStorage.getItem(TOPICS_KEY)) ?? []; } catch { return []; }
-}
-function saveCustomTopics(topics) {
-  localStorage.setItem(TOPICS_KEY, JSON.stringify(topics));
-}
-
-const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
-const emptyApproach = () => ({ _key: crypto.randomUUID(), label: 'Approach', approach: '', timeComplexity: '', spaceComplexity: '', code: '' });
-const defaultCard = {
-  title: '', topic: '', subtopic: '', difficulty: 'Medium', problemLink: '', question: '',
-  approaches: [],
-  notes: '',
-};
-
-// ── Draft helpers ──────────────────────────────────────────
-const DRAFT_KEY = 'dsa_card_draft';
-function loadDraft() {
-  try {
-    const d = JSON.parse(localStorage.getItem(DRAFT_KEY));
-    if (!d) return null;
-    // migrate old drafts that used brute/better/optimal instead of approaches
-    if (!d.approaches) {
-      const migrated = [];
-      for (const [label, key] of [['Brute Force', 'brute'], ['Better', 'better'], ['Optimal', 'optimal']]) {
-        const a = d[key];
-        if (a && (a.approach || a.code || a.timeComplexity || a.spaceComplexity)) {
-          migrated.push({ _key: crypto.randomUUID(), label, ...a });
-        }
-      }
-      d.approaches = migrated;
-    }
-    return d;
-  } catch { return null; }
-}
-function saveDraft(d) { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); }
-function clearDraft() { localStorage.removeItem(DRAFT_KEY); }
-
-// ── TopicSelect ────────────────────────────────────────────
-function TopicSelect({ value, onChange }) {
-  const [customTopics, setCustomTopics] = useState(loadCustomTopics);
-  const allTopics = [...new Set([...DEFAULT_TOPICS, ...customTopics])].sort();
-
-  const [open, setOpen] = useState(false);
-  const [newTopic, setNewTopic] = useState('');
-  const [filter, setFilter] = useState('');
-  const ref = useRef();
-
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const addCustomTopic = () => {
-    const t = newTopic.trim();
-    if (!t || allTopics.includes(t)) return;
-    const updated = [...customTopics, t];
-    setCustomTopics(updated);
-    saveCustomTopics(updated);
-    onChange(t);
-    setNewTopic('');
-    setOpen(false);
-  };
-
-  const removeCustomTopic = (t, e) => {
-    e.stopPropagation();
-    const updated = customTopics.filter((c) => c !== t);
-    setCustomTopics(updated);
-    saveCustomTopics(updated);
-    if (value === t) onChange('');
-  };
-
-  const filtered = allTopics.filter((t) => t.toLowerCase().includes(filter.toLowerCase()));
-
-  return (
-    <div ref={ref} className="relative">
-      <label className="block text-xs text-zinc-500 mb-1">Topic *</label>
-      <button
-        type="button"
-        onClick={() => { setOpen((o) => !o); setFilter(''); }}
-        className="w-full flex items-center justify-between bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-left focus:outline-none focus:border-emerald-600 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
-      >
-        <span className={value ? 'text-zinc-800 dark:text-zinc-200' : 'text-zinc-600'}>{value || 'Select topic...'}</span>
-        <ChevronDown size={14} className={`text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl shadow-xl overflow-hidden">
-          {/* Search */}
-          <div className="p-2 border-b border-zinc-200 dark:border-zinc-800">
-            <input
-              autoFocus
-              type="text"
-              placeholder="Search topics..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
-            />
-          </div>
-
-          {/* Options */}
-          <div className="max-h-48 overflow-y-auto">
-            {filtered.length === 0 && (
-              <p className="text-xs text-zinc-600 px-3 py-2">No match — add below</p>
-            )}
-            {filtered.map((t) => (
-              <div
-                key={t}
-                onClick={() => { onChange(t); setOpen(false); }}
-                className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors ${value === t ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-              >
-                <span>{t}</span>
-                {customTopics.includes(t) && (
-                  <button
-                    type="button"
-                    onClick={(e) => removeCustomTopic(t, e)}
-                    className="text-zinc-600 hover:text-red-400 transition-colors ml-2"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Add new */}
-          <div className="p-2 border-t border-zinc-200 dark:border-zinc-800 flex gap-2">
-            <input
-              type="text"
-              placeholder="Add new topic..."
-              value={newTopic}
-              onChange={(e) => setNewTopic(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomTopic())}
-              className="flex-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={addCustomTopic}
-              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition-colors"
-            >
-              <Plus size={13} />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Approach section ───────────────────────────────────────
 function ApproachSection({ value, onChange, onRemove }) {
@@ -484,10 +333,24 @@ export default function CardForm() {
           <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Basic Info</h2>
           <Input label="Title" value={form.title} onChange={set('title')} required placeholder="Two Sum" />
           <div className="grid grid-cols-2 gap-4">
-            <TopicSelect value={form.topic} onChange={set('topic')} />
+            <CreatableSelect
+              label="Topic"
+              value={form.topic}
+              onChange={set('topic')}
+              defaultOptions={DEFAULT_TOPICS}
+              storageKey="dsa_custom_topics"
+              placeholder="Select topic..."
+              required
+            />
             <Select label="Difficulty" value={form.difficulty} onChange={set('difficulty')} options={DIFFICULTIES} required />
           </div>
-          <Input label="Subtopic" value={form.subtopic} onChange={set('subtopic')} placeholder="e.g. Prefix Sum, Kadane's Algorithm" />
+          <CreatableSelect
+            label="Subtopic"
+            value={form.subtopic}
+            onChange={set('subtopic')}
+            storageKey="dsa_custom_subtopics"
+            placeholder="e.g. Prefix Sum, Kadane's Algorithm"
+          />
           <Input label="Problem Link" value={form.problemLink} onChange={set('problemLink')} placeholder="https://leetcode.com/problems/..." />
         </div>
 

@@ -6,6 +6,7 @@ import useSettings from '../store/useSettings.js';
 import { DifficultyBadge, TopicBadge } from '../components/ui/Badge.jsx';
 import Button from '../components/ui/Button.jsx';
 import CardDetailModal from '../components/ui/CardDetailModal.jsx';
+import MultiSelectFilter from '../components/ui/MultiSelectFilter.jsx';
 import toast from 'react-hot-toast';
 
 const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
@@ -228,8 +229,8 @@ export default function AllCards() {
     }
   };
 
-  const handleTopicChange = (e) =>
-    applyFilters({ topic: e.target.value, subtopic: '' });
+  const handleTopicChange = (selectedTopics) =>
+    applyFilters({ topic: selectedTopics, subtopic: [] });
 
   const handleImportFile = async (e) => {
     const file = e.target.files?.[0];
@@ -246,9 +247,11 @@ export default function AllCards() {
     fetchTopics();
   };
 
-  // Subtopics for currently selected topic
-  const selectedTopicObj = topics.find((t) => (typeof t === 'string' ? t : t.topic) === filters.topic);
-  const subtopics = selectedTopicObj?.subtopics ?? [];
+  // Subtopics for currently selected topics
+  const selectedTopicNames = filters.topic || [];
+  const subtopics = topics
+    .filter((t) => selectedTopicNames.includes(typeof t === 'string' ? t : t.topic))
+    .flatMap((t) => t.subtopics || []);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -290,28 +293,21 @@ export default function AllCards() {
         </div>
 
         {/* Topic */}
-        <select
-          value={filters.topic}
+        <MultiSelectFilter
+          options={topics.map((t) => (typeof t === 'string' ? t : t.topic))}
+          selected={filters.topic || []}
           onChange={handleTopicChange}
-          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-emerald-600"
-        >
-          <option value="">All Topics</option>
-          {topics.map((t) => {
-            const name = typeof t === 'string' ? t : t.topic;
-            return <option key={name} value={name}>{name}</option>;
-          })}
-        </select>
+          placeholder="All Topics"
+        />
 
-        {/* Subtopic — only when selected topic has subtopics */}
-        {filters.topic && subtopics.length > 0 && (
-          <select
-            value={filters.subtopic ?? ''}
-            onChange={(e) => handleFilterChange('subtopic', e.target.value)}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-emerald-600"
-          >
-            <option value="">All Subtopics</option>
-            {subtopics.map((st) => <option key={st} value={st}>{st}</option>)}
-          </select>
+        {/* Subtopic — only when selected topics have subtopics */}
+        {selectedTopicNames.length > 0 && subtopics.length > 0 && (
+          <MultiSelectFilter
+            options={subtopics}
+            selected={filters.subtopic || []}
+            onChange={(val) => handleFilterChange('subtopic', val)}
+            placeholder="All Subtopics"
+          />
         )}
 
         {/* Difficulty */}
@@ -383,7 +379,7 @@ function CardRow({ card, onView, onEdit, onDelete, onDuplicate }) {
   };
 
   // Leitner due check: thresholds (days) per box, unseen cards are always due.
-  const BOX_THRESHOLD_DAYS = { 0: 0, 1: 3, 2: 7 };
+  const BOX_THRESHOLD_DAYS = { 0: 0, 1: 3, 2: 7, 3: 12 };
   const daysSince = card.lastReviewed ? (Date.now() - new Date(card.lastReviewed).getTime()) / 86_400_000 : Infinity;
   const isDue = !card.archived && daysSince >= (BOX_THRESHOLD_DAYS[card.boxLevel] ?? 0);
 

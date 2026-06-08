@@ -44,7 +44,7 @@ export default function CardDetailModal({ card, onClose }) {
   };
 
   const lastReviewedDate = localCard.lastReviewed ? new Date(localCard.lastReviewed).toLocaleDateString() : 'Never';
-  const boxLabel = localCard.archived ? 'Archived' : `Box ${localCard.boxLevel ?? 0}`;
+  const boxLabel = `Box ${localCard.boxLevel ?? 0}`;
 
   return (
     <div

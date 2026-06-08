@@ -27,8 +27,8 @@ export const getCards = async (req, res) => {
         { topic: { $regex: search, $options: 'i' } },
       ];
     }
-    if (topic) query.topic = topic;
-    if (subtopic) query.subtopic = subtopic;
+    if (topic) query.topic = { $in: topic.split(',') };
+    if (subtopic) query.subtopic = { $in: subtopic.split(',') };
     if (difficulty) query.difficulty = difficulty;
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -106,10 +106,9 @@ export const duplicateCard = async (req, res) => {
 };
 
 // Deadline-driven Leitner box system.
-// Boxes 0..2; "due" once enough days have elapsed since the last review.
-const FINAL_BOX = 2;
-// Threshold in days before a card in a given box becomes due again.
-const BOX_THRESHOLD_DAYS = { 0: 0, 1: 3, 2: 7 };
+// Boxes 0..3; "due" once enough days have elapsed since the last review.
+const FINAL_BOX = 3;
+const BOX_THRESHOLD_DAYS = { 0: 0, 1: 3, 2: 7, 3: 12 };
 const MS_PER_DAY = 86_400_000;
 
 export const reviewCard = async (req, res) => {
@@ -122,15 +121,11 @@ export const reviewCard = async (req, res) => {
     const update = { lastReviewed: new Date(), $inc: { visitCount: 1 } };
 
     if (!passed) {
-      // Missed — drop back to box 0.
       update.boxLevel = 0;
     } else if (card.boxLevel < FINAL_BOX) {
-      // Correct — promote to the next box.
       update.boxLevel = card.boxLevel + 1;
-    } else {
-      // Correct on the final box — graduate / archive the card.
-      update.archived = true;
     }
+    // Correct on box 3 — stays in box 3, resets the 12-day timer via lastReviewed
 
     const updated = await Card.findByIdAndUpdate(req.params.id, update, { new: true });
     res.json(updated);
@@ -180,42 +175,56 @@ export const getTopics = async (req, res) => {
   }
 };
 
-// Weighted sampling without replacement. Final weight combines two factors:
-//   recencyWeight = 1 - e^(-daysSinceLastReview / HALF_LIFE)
-//     never-reviewed cards get 1.0 (max), recently reviewed get lower weight.
-//     With HALF_LIFE = 7, a card seen 7 days ago is ~0.63, yesterday ~0.13.
-//   scarcityWeight = 1 / (visitCount + 1)
-//     unseen cards get 1.0, each prior visit halves/thirds/quarters their pull.
-// finalWeight = recencyWeight * scarcityWeight — surfaces new/lesser-seen cards aggressively.
+// Weighted sampling without replacement. Final weight combines four factors:
+//   recencyWeight  = 1 - e^(-daysSinceLastReview / HALF_LIFE)   [never-reviewed → 1.0]
+//   scarcityWeight = 1 / (visitCount + 1)                        [unseen → 1.0]
+//   boxWeight      = (FINAL_BOX + 1 - boxLevel) / (FINAL_BOX + 1) [box 0 → 1.0, box 3 → 0.25]
+//   subtopicWeight = 1 / (subtopicPicksSoFar + 1)               [dynamic: penalises subtopics already picked]
+// finalWeight = recencyWeight * scarcityWeight * boxWeight * subtopicWeight
+// subtopicWeight is recomputed each round so picking one item immediately deprioritises
+// remaining items from the same subtopic.
 const HALF_LIFE = 7;
 
 function weightedSample(pool, count) {
   if (pool.length <= count) return pool;
   const now = Date.now();
 
-  const weights = pool.map((c) => {
+  // Base weights — static per item (recency × scarcity × box)
+  const baseWeights = pool.map((c) => {
     const scarcityWeight = 1 / ((c.visitCount ?? 0) + 1);
     const recencyWeight = c.lastReviewed
       ? 1 - Math.exp(-((now - new Date(c.lastReviewed).getTime()) / 86_400_000) / HALF_LIFE)
-      : 1; // never reviewed — max recency priority
-    return recencyWeight * scarcityWeight;
+      : 1;
+    const boxWeight = (FINAL_BOX + 1 - (c.boxLevel ?? 0)) / (FINAL_BOX + 1);
+    return recencyWeight * scarcityWeight * boxWeight;
   });
 
   const selected = [];
   const available = [...pool.keys()];
-  const w = [...weights];
+  const base = [...baseWeights];
+  const subtopicPicks = {}; // tracks how many items from each subtopic have been picked
 
   for (let i = 0; i < count && available.length > 0; i++) {
-    const total = w.reduce((s, x) => s + x, 0);
+    // Effective weight = base × subtopic novelty (recomputed each round)
+    const effective = available.map((poolIdx, j) => {
+      const sub = pool[poolIdx].subtopic || '';
+      return base[j] * (1 / ((subtopicPicks[sub] ?? 0) + 1));
+    });
+
+    const total = effective.reduce((s, x) => s + x, 0);
     let r = Math.random() * total;
     let picked = available.length - 1;
     for (let j = 0; j < available.length; j++) {
-      r -= w[j];
+      r -= effective[j];
       if (r <= 0) { picked = j; break; }
     }
-    selected.push(pool[available[picked]]);
+
+    const pickedItem = pool[available[picked]];
+    selected.push(pickedItem);
+    const sub = pickedItem.subtopic || '';
+    subtopicPicks[sub] = (subtopicPicks[sub] ?? 0) + 1;
     available.splice(picked, 1);
-    w.splice(picked, 1);
+    base.splice(picked, 1);
   }
 
   return selected;

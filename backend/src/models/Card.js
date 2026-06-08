@@ -17,7 +17,7 @@ const cardSchema = new mongoose.Schema({
   question: { type: String, default: '' },
   approaches: { type: [approachSchema], default: () => [] },
   notes: { type: String, default: '' },
-  boxLevel: { type: Number, default: 0, min: 0, max: 2 },
+  boxLevel: { type: Number, default: 0, min: 0, max: 3 },
   archived: { type: Boolean, default: false },
   lastReviewed: { type: Date, default: null },
   weak: { type: Boolean, default: false },

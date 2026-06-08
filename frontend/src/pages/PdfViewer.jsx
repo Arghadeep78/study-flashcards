@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -14,33 +14,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
-function sectionForPage(sections, page) {
-  return sections.find((s) => page >= s.startPage && page <= s.endPage) ?? null;
-}
-
-// ---- inline EditModal (same pattern as PdfNotes.jsx) ----
-
-function emptySection() { return { startPage: '', endPage: '', subtopic: '' }; }
-
-function normalizeSections(rows) {
-  return rows
-    .map((r) => {
-      const start = parseInt(r.startPage, 10);
-      const end = r.endPage === '' || r.endPage == null ? start : parseInt(r.endPage, 10);
-      return { startPage: start, endPage: end, subtopic: (r.subtopic ?? '').trim() };
-    })
-    .filter((r) => Number.isInteger(r.startPage) && r.startPage >= 1);
-}
-
-
-function validateSections(sections) {
-  for (let i = 0; i < sections.length; i++) {
-    const s = sections[i];
-    if (!Number.isInteger(s.endPage) || s.endPage < s.startPage)
-      return `Section ${i + 1}: end page must be ≥ start page`;
-  }
-  return null;
-}
+// --- Note specific helper ---
+function emptyNote() { return { startPage: '', endPage: '', subtopic: '' }; }
 
 const inputCls =
   'w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-flat-blue-500';
@@ -48,34 +23,28 @@ const inputCls =
 function EditModal({ note, onClose, onSaved }) {
   const [topic, setTopic] = useState(note.topic);
   const [title, setTitle] = useState(note.title ?? '');
-  const [sections, setSections] = useState(
-    (note.sections ?? []).map((s) => ({
-      startPage: String(s.startPage),
-      endPage: String(s.endPage),
-      subtopic: s.subtopic ?? '',
-    }))
-  );
+  const [subtopic, setSubtopic] = useState(note.subtopic ?? '');
+  const [startPage, setStartPage] = useState(String(note.startPage ?? 1));
+  const [endPage, setEndPage] = useState(String(note.endPage ?? note.startPage ?? 1));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const updateSection = (i, key, value) =>
-    setSections((prev) => prev.map((s, idx) => (idx === i ? { ...s, [key]: value } : s)));
-  const addSection = () => setSections((prev) => [...prev, emptySection()]);
-  const removeSection = (i) => setSections((prev) => prev.filter((_, idx) => idx !== i));
 
   const handleSubmit = async () => {
     setError('');
     if (!topic.trim()) { setError('Topic is required'); return; }
-    const normalized = normalizeSections(sections);
-    const sectionError = validateSections(normalized);
-    if (sectionError) { setError(sectionError); return; }
+    const start = parseInt(startPage, 10);
+    const end = endPage === '' ? start : parseInt(endPage, 10);
+    if (!Number.isInteger(start) || start < 1) { setError('Start page must be ≥ 1'); return; }
+    if (!Number.isInteger(end) || end < start) { setError('End page must be ≥ start page'); return; }
 
     setLoading(true);
     try {
       const { data } = await pdfNotesApi.update(note._id, {
         topic: topic.trim(),
         title: title.trim(),
-        sections: normalized,
+        subtopic: subtopic.trim(),
+        startPage: start,
+        endPage: end,
       });
       toast.success('Saved');
       onSaved(data);
@@ -110,49 +79,31 @@ function EditModal({ note, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Sections editor */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Sections</span>
-              <button type="button" onClick={addSection} className="text-xs text-flat-blue-500 hover:text-flat-blue-600 font-semibold flex items-center gap-1">
-                <Plus size={12} /> Add section
-              </button>
+          <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Start</label>
+                <input
+                  type="number" min="1" value={startPage}
+                  onChange={(e) => setStartPage(e.target.value)}
+                  placeholder="1"
+                  className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-flat-blue-500 w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">End</label>
+                <input
+                  type="number" min="1" value={endPage}
+                  onChange={(e) => setEndPage(e.target.value)}
+                  placeholder={startPage || '1'}
+                  className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-flat-blue-500 w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
             </div>
-            <div className="space-y-3">
-              {sections.map((s, i) => (
-                <div key={i} className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Start</label>
-                      <input
-                        type="number" min="1" value={s.startPage}
-                        onChange={(e) => updateSection(i, 'startPage', e.target.value)}
-                        placeholder="1"
-                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-flat-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">End</label>
-                      <input
-                        type="number" min="1" value={s.endPage}
-                        onChange={(e) => updateSection(i, 'endPage', e.target.value)}
-                        placeholder={s.startPage || '1'}
-                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-flat-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                    <button type="button" onClick={() => removeSection(i)} className="self-end mb-0.5 p-1.5 text-zinc-400 hover:text-red-500 transition-colors shrink-0"><Trash2 size={14} /></button>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Subtopic</label>
-                    <input value={s.subtopic} onChange={(e) => updateSection(i, 'subtopic', e.target.value)} placeholder="e.g. Memoization, Graph BFS…" className={inputCls} />
-                  </div>
-                </div>
-              ))}
-              {sections.length === 0 && (
-                <p className="text-xs text-zinc-400 italic">No sections yet. Click "Add section" to create one.</p>
-              )}
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Subtopic</label>
+              <input value={subtopic} onChange={(e) => setSubtopic(e.target.value)} placeholder="e.g. Memoization, Graph BFS…" className={inputCls} />
             </div>
-            <p className="text-xs text-zinc-400 mt-2">Same number for Start and End = single page.</p>
           </div>
 
           {error && <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{error}</p>}
@@ -175,6 +126,7 @@ function EditModal({ note, onClose, onSaved }) {
 export default function PdfViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [note, setNote] = useState(null);
   const [numPages, setNumPages] = useState(0);
   const [page, setPage] = useState(1);
@@ -190,7 +142,13 @@ export default function PdfViewer() {
 
   useEffect(() => {
     pdfNotesApi.getOne(id)
-      .then(({ data }) => setNote(data))
+      .then(({ data }) => {
+        setNote(data);
+        const params = new URLSearchParams(window.location.search);
+        if (!params.get('page')) {
+          setPage(data.startPage || 1);
+        }
+      })
       .catch((e) => toast.error(e.response?.data?.error ?? 'Failed to load note'));
   }, [id]);
 
@@ -240,7 +198,6 @@ export default function PdfViewer() {
     return () => observers.forEach((o) => o.disconnect());
   }, [continuous, numPages]);
 
-  const sections = note?.sections ?? [];
   const fileUrl = note?.fileUrl ?? null;
 
   const goTo = (p) => {
@@ -253,7 +210,16 @@ export default function PdfViewer() {
     }
   };
 
-  const currentSection = useMemo(() => sectionForPage(sections, page), [sections, page]);
+  useEffect(() => {
+    if (numPages > 0) {
+      const params = new URLSearchParams(location.search);
+      const p = parseInt(params.get('page'), 10);
+      if (!isNaN(p) && p >= 1 && p <= numPages) {
+        setTimeout(() => goTo(p), 100);
+      }
+    }
+  }, [location.search, numPages]);
+
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -334,14 +300,12 @@ export default function PdfViewer() {
               <ChevronRight size={16} />
             </button>
           </div>
-          {currentSection && (
-            <div className="text-xs px-3 py-2 rounded-lg bg-flat-blue-50 dark:bg-flat-blue-600/10 text-flat-blue-600 dark:text-flat-blue-400 font-semibold">
-              {currentSection.subtopic || 'Unnamed section'}
-              <span className="text-flat-blue-400 font-normal ml-1">
-                · {currentSection.startPage === currentSection.endPage ? `p.${currentSection.startPage}` : `pp.${currentSection.startPage}–${currentSection.endPage}`}
-              </span>
-            </div>
-          )}
+          <div className="text-xs px-3 py-2 rounded-lg bg-flat-blue-50 dark:bg-flat-blue-600/10 text-flat-blue-600 dark:text-flat-blue-400 font-semibold">
+            {note.subtopic || 'Unnamed section'}
+            <span className="text-flat-blue-400 font-normal ml-1">
+              · {note.startPage === note.endPage ? `p.${note.startPage}` : `pp.${note.startPage}–${note.endPage}`}
+            </span>
+          </div>
           {/* Zoom */}
           <div className="flex items-center gap-2">
             <button onClick={() => { const n = Math.max(0.5, committedScale - 0.2); visualScaleRef.current = n; setCommittedScale(n); }} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-xs font-semibold">
@@ -362,45 +326,8 @@ export default function PdfViewer() {
           <p className="text-[10px] text-zinc-400">Pinch or Ctrl+scroll to zoom</p>
         </div>
 
-        {/* Sections list */}
-        <div className="px-4 py-4 flex-1">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Sections</p>
-            <button
-              onClick={() => setShowEdit(true)}
-              className="text-xs text-flat-blue-500 hover:text-flat-blue-600 font-semibold flex items-center gap-1"
-            >
-              <Pencil size={11} /> Edit
-            </button>
-          </div>
-          {sections.length === 0 ? (
-            <div>
-              <p className="text-xs text-zinc-400">No sections yet.</p>
-              <button onClick={() => setShowEdit(true)} className="mt-2 text-xs text-flat-blue-500 hover:text-flat-blue-600 font-semibold flex items-center gap-1">
-                <Plus size={11} /> Add sections
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {sections.map((s, i) => {
-                const active = currentSection === s;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => goTo(s.startPage)}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors ${active ? 'bg-flat-blue-50 dark:bg-flat-blue-600/10 text-flat-blue-600 dark:text-flat-blue-400' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-                  >
-                    <span className={`block text-sm truncate ${active ? 'font-bold' : 'font-medium'}`}>
-                      {s.subtopic || `Section ${i + 1}`}
-                    </span>
-                    <span className="text-xs text-zinc-400">
-                      {s.startPage === s.endPage ? `p. ${s.startPage}` : `pp. ${s.startPage}–${s.endPage}`}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+        <div className="px-4 py-4 flex-1 flex flex-col justify-end">
+          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wider text-center">End of properties</p>
         </div>
       </aside>
 

@@ -11,7 +11,7 @@ const useCardStore = create((set, get) => ({
   stats: null,
   dueCards: [],
   loading: false,
-  filters: { search: '', topic: '', subtopic: '', difficulty: '' },
+  filters: { search: '', topic: [], subtopic: [], difficulty: '' },
 
   setFilters: (filters) => set((s) => ({ filters: { ...s.filters, ...filters }, page: 1 })),
   setPage: (page) => { set({ page }); get().fetchCards(); },
@@ -19,8 +19,13 @@ const useCardStore = create((set, get) => ({
   fetchCards: async () => {
     set({ loading: true });
     try {
-      const { filters, page } = get();
-      const { data } = await cardsApi.getAll({ ...filters, page, limit: 50 });
+      const params = { ...filters, page, limit: 50 };
+      if (filters.topic?.length) params.topic = filters.topic.join(',');
+      else delete params.topic;
+      if (filters.subtopic?.length) params.subtopic = filters.subtopic.join(',');
+      else delete params.subtopic;
+      
+      const { data } = await cardsApi.getAll(params);
       set({ cards: data.cards, total: data.total, pages: data.pages });
     } catch {
       toast.error('Failed to load cards');

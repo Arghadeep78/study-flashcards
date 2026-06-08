@@ -3,6 +3,15 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --pdf-canvas-bg: #d4d4d8;     /* zinc-300 — grey canvas behind PDF pages */
+    --pdf-canvas-border: #a1a1aa; /* zinc-400 — border of the canvas box */
+  }
+  .dark {
+    --pdf-canvas-bg: #27272a;     /* zinc-800 — dark grey canvas in dark mode */
+    --pdf-canvas-border: #3f3f46; /* zinc-700 — border in dark mode */
+  }
+
   body {
     @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
   }

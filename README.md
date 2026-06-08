@@ -1,6 +1,6 @@
 # DSA Flashcards
 
-A deadline-driven flashcard app for DSA interview prep, optimized for a strict 45–60 day prep window. Uses a **Leitner box system** rather than open-ended SM-2 scheduling. Built with React + Vite on the frontend and Express + MongoDB on the backend.
+A deadline-driven flashcard + PDF notes app for DSA interview prep, optimized for a strict 45–60 day prep window. Uses a **Leitner box system** rather than open-ended SM-2 scheduling. Built with React + Vite on the frontend and Express + MongoDB on the backend.
 
 ---
 
@@ -11,6 +11,7 @@ A deadline-driven flashcard app for DSA interview prep, optimized for a strict 4
 | Frontend | React 18, Vite, Tailwind CSS, Zustand, React Router v6 |
 | Backend | Express 4, Mongoose 8, Node.js (ESM) |
 | Database | MongoDB |
+| PDF Rendering | react-pdf (pdf.js) |
 | Charts | Recharts |
 | Icons | Lucide React |
 | Notifications | react-hot-toast |
@@ -23,19 +24,24 @@ A deadline-driven flashcard app for DSA interview prep, optimized for a strict 4
 flashcards/
 ├── backend/
 │   └── src/
-│       ├── index.js              # Express server entry
-│       ├── db.js                 # MongoDB connection
+│       ├── index.js                # Express server entry
+│       ├── db.js                   # MongoDB connection
 │       ├── models/
-│       │   └── Card.js           # Mongoose schema
+│       │   ├── Card.js             # Flashcard schema
+│       │   └── PdfNote.js          # PDF section schema
 │       ├── controllers/
-│       │   ├── cards.js          # All card logic
-│       │   └── stats.js          # Dashboard stats
-│       └── routes/
-│           ├── cards.js
-│           └── stats.js
+│       │   ├── cards.js            # Flashcard logic + review modes
+│       │   ├── pdfNotes.js         # PDF notes logic + review modes
+│       │   └── stats.js            # Dashboard stats
+│       ├── routes/
+│       │   ├── cards.js
+│       │   ├── pdfNotes.js
+│       │   └── stats.js
+│       └── lib/
+│           └── drive.js            # Google Drive download helper
 └── frontend/
     └── src/
-        ├── App.jsx               # Routes
+        ├── App.jsx                 # Routes
         ├── pages/
         │   ├── Dashboard.jsx
         │   ├── AllCards.jsx
@@ -45,23 +51,32 @@ flashcards/
         │   ├── SelectiveReview.jsx
         │   ├── WeakCards.jsx
         │   ├── StudyMode.jsx
-        │   └── Settings.jsx
+        │   ├── Settings.jsx
+        │   ├── PdfNotes.jsx            # PDF notes list
+        │   ├── PdfViewer.jsx           # Single PDF viewer
+        │   ├── PdfDailyReview.jsx
+        │   ├── PdfRandomReview.jsx
+        │   ├── PdfSelectiveReview.jsx
+        │   └── PdfWeakReview.jsx
         ├── components/
         │   ├── layout/
         │   │   ├── Layout.jsx
         │   │   └── Sidebar.jsx
         │   └── ui/
-        │       ├── ReviewSession.jsx   # Shared review UI
-        │       ├── CardDetailModal.jsx # Click-to-view modal
+        │       ├── ReviewSession.jsx       # Shared flashcard review UI
+        │       ├── PdfReviewSession.jsx    # Shared PDF review UI
+        │       ├── CardDetailModal.jsx
+        │       ├── CreatableSelect.jsx     # Dropdown with custom option creation
+        │       ├── MultiSelectFilter.jsx
         │       ├── Badge.jsx
         │       ├── Button.jsx
         │       ├── CodeBlock.jsx
         │       └── StatCard.jsx
         ├── store/
-        │   ├── useCardStore.js    # Global card state (Zustand)
-        │   └── useSettings.js     # User settings (Zustand + localStorage)
+        │   ├── useCardStore.js     # Global card state (Zustand)
+        │   └── useSettings.js      # User settings (Zustand + localStorage)
         └── utils/
-            └── api.js             # Axios API client
+            └── api.js              # Axios API client
 ```
 
 ---
@@ -77,6 +92,8 @@ npm install
 npm run dev      # nodemon, port 5000
 ```
 
+> **Note:** Do not put runtime-written files (uploads) inside `backend/src/` — nodemon will restart mid-request. The `uploads/` directory is at `backend/uploads/`.
+
 ### Frontend
 
 ```bash
@@ -85,21 +102,21 @@ npm install
 npm run dev      # Vite, port 5173
 ```
 
-Vite proxies `/api` to `localhost:5000` — no CORS issues in dev.
+Vite proxies `/api` and `/uploads` to `localhost:5000` — no CORS issues in dev.
 
 ---
 
-## Card Schema
+## Flashcard Schema
 
 ```js
 {
-  title:       String,          // required
-  topic:       String,          // required
-  subtopic:    String,
-  difficulty:  'Easy' | 'Medium' | 'Hard',
-  problemLink: String,
-  question:    String,
-  approaches:  [                // any number, any name
+  title:        String,          // required
+  topic:        String,          // required
+  subtopic:     String,
+  difficulty:   'Easy' | 'Medium' | 'Hard',
+  problemLink:  String,
+  question:     String,
+  approaches: [
     {
       label:           String,
       approach:        String,
@@ -108,179 +125,179 @@ Vite proxies `/api` to `localhost:5000` — no CORS issues in dev.
       code:            String,
     }
   ],
-  notes:       String,
+  notes:        String,
 
   // Leitner tracking
-  boxLevel:    Number,          // current box: 0, 1, or 2 (default: 0)
-  archived:    Boolean,         // true once graduated out of the final box (default: false)
-  lastReviewed: Date,           // last time rated in any session (default: null)
-
-  // tracking
-  visitCount:  Number,          // total times rated across all 4 modes (default: 0)
-  weak:        Boolean,         // manually flagged as weak (default: false)
+  boxLevel:     Number,          // 0, 1, 2, or 3 (default: 0)
+  archived:     Boolean,         // manual archive flag (not used by the box system)
+  lastReviewed: Date,
+  visitCount:   Number,          // total ratings across all modes
+  weak:         Boolean,         // manually flagged
 }
 ```
 
-> The card content fields (`title`, `topic`, `subtopic`, `difficulty`, `problemLink`, `question`, `approaches`, `notes`) are unchanged. Only the scheduling fields changed from SM-2 to Leitner.
+---
+
+## PDF Note Schema
+
+Each **section** of a PDF is stored as its own `PdfNote` document. Multiple sections from the same file share a `fileName` / `fileUrl`.
+
+```js
+{
+  topic:        String,          // required — deck-level grouping
+  title:        String,          // = subtopic (section display name)
+  subtopic:     String,          // section subtopic (dropdown-selected)
+  difficulty:   'Easy' | 'Medium' | 'Hard' | '',  // optional
+  sourceType:   'file' | 'drive',
+  fileName:     String,          // stored filename on disk
+  originalName: String,          // original upload filename (e.g. "notes.pdf")
+  fileUrl:      String,          // served path, e.g. /uploads/<file>
+  driveLink:    String,          // Google Drive share link (for refresh)
+  startPage:    Number,          // required
+  endPage:      Number,          // required
+
+  // Leitner tracking (mirrors Card schema)
+  boxLevel:     Number,          // 0, 1, 2, or 3
+  archived:     Boolean,         // manual archive flag (not used by the box system)
+  lastReviewed: Date,
+  visitCount:   Number,
+  passCount:    Number,          // total "Got it" ratings
+  failCount:    Number,          // total "Missed" ratings
+  weak:         Boolean,
+}
+```
+
+### Adding PDF Notes
+
+1. Click **New PDF Note** on the PDF Notes page.
+2. Choose **Upload PDF** or **Google Drive link**.
+3. Select a **Topic** (required).
+4. Add one or more **Sections** — each section requires:
+   - **Start / End page**
+   - **Subtopic** (required, dropdown with custom option creation — saved per device)
+   - **Title** (optional free text)
+   - **Difficulty** (optional — Easy / Medium / Hard)
+5. Each section becomes a separate reviewable `PdfNote` document sharing the same PDF file.
+
+### Archive system
+
+Sections can be manually archived via the archive toggle on each card. Archived sections are shown in the All PDF Notes list (dimmed) but excluded from all review queues. The box system never auto-archives — archive is always a manual action.
 
 ---
 
 ## Deadline-Driven Leitner Box System
 
-Cards move through three boxes (0 → 1 → 2). A correct answer promotes a card one box; a missed answer drops it straight back to box 0. Each box has a fixed re-review threshold, so a card resurfaces sooner when you're still learning it and less often once it's sticking. The whole system is tuned for a fixed 45–60 day window — there are no open-ended multi-month intervals.
+Applies to both **flashcards** and **PDF sections**. Cards/sections move through four boxes (0 → 1 → 2 → 3). A correct answer promotes one box; a missed answer drops straight back to box 0. Box 3 is permanent — correct ratings reset the 12-day timer but do not graduate out.
 
-Fires on every rating via `POST /api/cards/:id/review` with a binary rating: `{ rating: 'pass' }` (**Correct**) or `{ rating: 'fail' }` (**Missed**).
+Rating: `POST .../review` with `{ rating: 'pass' | 'fail' }`.
 
 ### Rating logic
 
 ```
-Missed  (rating: 'fail')  →  boxLevel = 0,  lastReviewed = now
-
+Missed  (rating: 'fail')  →  boxLevel = 0,    lastReviewed = now
 Correct (rating: 'pass'):
-  boxLevel < 2   →  boxLevel += 1,  lastReviewed = now   (promote)
-  boxLevel === 2 →  archived = true                       (graduate out of the deck)
+  boxLevel < 3            →  boxLevel += 1,   lastReviewed = now   (promote)
+  boxLevel === 3          →  stays at Box 3,  lastReviewed = now   (timer resets)
 ```
 
-`visitCount` increments on every rating regardless of outcome.
+`visitCount` increments on every rating. `passCount` / `failCount` track each outcome separately (PDF sections only).
 
-### Box thresholds (when a card becomes due again)
+### Box thresholds
 
 | Box | Threshold | Meaning |
 |---|---|---|
-| 0 | 0 days | Always due today — new (unseen) or just-missed cards |
-| 1 | 3 days | Due 3 days after it was last reviewed |
-| 2 | 7 days | Due 7 days after it was last reviewed |
+| 0 | 0 days  | Always due — new or just-missed |
+| 1 | 3 days  | Due 3 days after last reviewed |
+| 2 | 7 days  | Due 7 days after last reviewed |
+| 3 | 12 days | Due 12 days after last reviewed — stays here indefinitely |
 
-A card is **due** when `archived === false` and the time elapsed since `lastReviewed` is at least its box threshold. Unseen cards (`lastReviewed === null`) are always due.
-
-### Graduation
-
-Answering **Correct** on a box-2 card sets `archived: true`. Archived cards are removed from all due queues — they've graduated the system and are considered interview-ready.
-
-### Auto-clearing weak flag
-
-The `weak` flag is no longer auto-cleared by the scheduler; it is purely a manual toggle. Flag and unflag cards yourself with the flag icon in any review session or on the All Cards page.
+Unseen items (`lastReviewed === null`) are always due. Box 3 is the permanent maintenance box — items never leave it, they just resurface every 12 days.
 
 ---
 
-## Review Modes
+## Flashcard Review Modes
 
-### 1. Daily Review
+### 1. Daily Review — `/review/daily`
 
-**Route:** `/review/daily`
+Fetches all due, non-archived cards sorted box 0 first (`boxLevel asc`, then `lastReviewed asc`). Frontend slices to `dailyTarget` (default 20). Goal: clear today's queue, struggling cards first.
 
-**Logic:**
-1. Fetches all due, non-archived cards from the backend (`GET /api/cards/due`).
-2. A card is due when the elapsed time since `lastReviewed` meets its box threshold (Box 0: 0d, Box 1: 3d, Box 2: 7d). Unseen cards are always due.
-3. The queue is sorted **box 0 first** (`boxLevel asc`, then `lastReviewed asc`), so cards you're still struggling with surface before cards that are merely cycling back through.
-4. The frontend slices to `dailyTarget` (user setting, default 20).
-5. Each rating (Correct/Missed) promotes or resets the card's box.
+### 2. Random Review — `/review/random`
 
-**Goal:** Clear today's due queue. Box-0 cards (new or recently missed) always come first.
+Pick a count. Backend samples `count × 5` cards via `$sample`, then applies weighted sampling (see below). Goal: random drilling biased toward unseen / long-unseen cards.
 
----
+### 3. Selective Review — `/review/selective`
 
-### 2. Random Review
+Pick topics + optional subtopics + count. Backend matches non-archived cards, sorts unseen first then longest-unseen, pools `count × 5`, then applies weighted sampling. Goal: targeted pattern drilling that surfaces new questions aggressively.
 
-**Route:** `/review/random`
+### 4. Weak Cards — `/review/weak`
 
-**Logic:**
-1. You pick a count (1–50 cards).
-2. Backend fetches a pool of `count × 5` cards via MongoDB `$sample` (uniform random from the entire deck).
-3. Each card in the pool is assigned a weight combining recency and scarcity (see [Weighted Sampling](#weighted-sampling-shared-logic)). The recency component uses `HALF_LIFE = 7` days:
-
-   ```
-   recencyWeight = 1 - e^(-daysSinceLastReview / 7)
-   ```
-
-   - **Never reviewed** (`lastReviewed = null`) → recency **1.0** (highest priority)
-   - Last reviewed **7 days ago** → recency **~0.63**
-   - Last reviewed **3 days ago** → recency **~0.35**
-   - Last reviewed **yesterday** → recency **~0.13**
-
-4. Weighted sampling without replacement picks `count` cards from the pool.
-5. If the pool is smaller than `count` (small deck), all pool cards are returned as-is.
-6. Each rating promotes or resets the card's box.
-
-**Goal:** Random drilling with a bias toward cards you haven't seen in a while (and haven't seen often).
+All `weak: true` cards sorted by `boxLevel asc`, then `lastReviewed asc`. The weak flag is manual-only — toggle via the flag icon in any session or on the All Cards page.
 
 ---
 
-### 3. Selective Review
+## PDF Review Modes
 
-**Route:** `/review/selective`
+All PDF review modes use a split-screen layout: sidebar on the left, full-height PDF viewer on the right. There is no way to skip ahead — sections are presented in order and you must rate each one before moving on.
 
-Selective Review is **pattern-focused**: it aggressively surfaces new and lesser-seen questions within the selected pattern (topic/subtopic), rather than sampling uniformly.
+### 1. PDF Daily Review — `/pdf-notes/review/daily`
 
-**Logic:**
-1. You select one or more topics, optionally narrow by subtopics, and pick a count (or "All").
-2. Backend builds a MongoDB aggregation that `$match`es **non-archived** cards (`archived: false`) within the selected topics and subtopics.
-3. The pipeline adds a temporary `isUnseen` field (`1` when `visitCount === 0`, else `0`) and sorts by `{ isUnseen: -1, lastReviewed: 1 }` — brand-new questions first, then longest-unseen.
-4. If a specific count is requested:
-   - Limits the sorted pool to `count × 5` cards via `$limit`.
-   - Hard cap of 2000 on counted requests.
-5. If "All" is selected:
-   - Skips `$limit` and keeps every matching card in the pool.
-6. The pool is passed through `weightedSample`, which applies the combined recency × scarcity weight (see below).
-7. Each rating promotes or resets the card's box.
+Due, non-archived sections sorted box 0 first. Same threshold logic as flashcards.
 
-**Goal:** Targeted drilling that pushes you toward the questions in a pattern you've never seen — or seen least.
+### 2. PDF Random Review — `/pdf-notes/review/random`
 
----
+Pick a count. Backend samples all non-archived sections and applies weighted sampling (all four factors). No ability to jump between sections during the session.
 
-### 4. Weak Cards
+### 3. PDF Selective Review — `/pdf-notes/review/selective`
 
-**Route:** `/review/weak`
+Pick topics + subtopics + count (slider). Optionally filter by difficulty (Easy/Medium/Hard) and box (0–3) — filters apply client-side after the API call. The slider max adapts to the total section count of the selected topics. No ability to jump between sections during the session.
 
-**Logic:**
-1. Cards are manually flagged `weak: true` using the flag icon during any review session.
-2. The list view fetches all `weak: true` cards, sorted by:
-   - `boxLevel asc` — least-mastered cards (lowest box) appear first.
-   - `lastReviewed asc` — tiebreaker: longest unseen first.
-3. "Review All Weak" launches a full `ReviewSession` over all weak cards in that order.
-4. The weak flag is manual only — unflag from the list or via the flag button during a session.
-5. Each rating promotes or resets the card's box.
+### 4. PDF Weak Sections — `/pdf-notes/review/weak`
 
-**Goal:** Dedicated session for cards you've explicitly identified as problematic.
+All `weak: true`, non-archived sections sorted box 0 first.
+
+### PDF Review Session UI
+
+- **Reveal flow:** title shown immediately; all other metadata (subtopic, topic, PDF name, page range, box, difficulty) blacked out until revealed via the eye toggle or by clicking any blacked-out element. PDF is hidden behind a blur overlay until "Reveal PDF" is clicked.
+- **Left panel:** session title · progress bar · Quit button · title (always visible) · eye toggle · blacked-out details · weak toggle · page navigator · zoom controls (hidden until PDF revealed) · **Missed / Got it** rating buttons pinned to bottom.
+- **Right panel:** full PDF rendered at `scale=2.0`; opens at fit-to-width zoom. Zoom is pure CSS transform (no re-renders). Ctrl+scroll to zoom; section pages auto-scroll on section change.
+- **Navigation lock:** browser close/refresh is blocked via `beforeunload` while a session is active. The Quit button shows a confirm dialog — progress already rated is saved; remaining sections are skipped.
+- **Rating:** **Missed** / **Got it** buttons stacked vertically, revealed after PDF is shown. Each rating updates the section's Leitner box. No section skipping — the queue is not shown.
 
 ---
 
 ## Weighted Sampling (shared logic)
 
-Both Random and Selective use `weightedSample(pool, count)` in `cards.js`. The final weight multiplies two factors:
+Used by Random and Selective modes for both flashcards and PDF sections.
 
 ```js
-recencyWeight  = lastReviewed === null ? 1.0 : 1 - e^(-daysSince / HALF_LIFE)  // HALF_LIFE = 7 days
+recencyWeight  = lastReviewed === null ? 1.0 : 1 - e^(-daysSince / 7)
 scarcityWeight = 1 / (visitCount + 1)
-finalWeight    = recencyWeight * scarcityWeight
+boxWeight      = (4 - boxLevel) / 4          // box 0 → 1.0, box 3 → 0.25
+subtopicWeight = 1 / (subtopicPicksSoFar + 1) // dynamic — recomputed each round
+finalWeight    = recencyWeight × scarcityWeight × boxWeight × subtopicWeight
 ```
 
-- **`recencyWeight`** — higher the longer it's been since the last review. Never-reviewed cards get the max (1.0). With `HALF_LIFE = 7`, weight climbs quickly: ~0.63 at 7 days, ~0.35 at 3 days, ~0.13 at 1 day.
-- **`scarcityWeight`** — `1 / (visitCount + 1)`. Unseen cards get 1.0; each prior rating shrinks the pull (2nd view → 0.5, 3rd → 0.33, 4th → 0.25…), so frequently-seen cards can't crowd out fresh ones.
+- **recencyWeight** — climbs the longer since last review. Never-reviewed → 1.0; 7 days ago → ~0.63; 1 day ago → ~0.13.
+- **scarcityWeight** — `1 / (visitCount + 1)`. Unseen → 1.0; each prior rating shrinks it.
+- **boxWeight** — lower boxes score higher. Box 0 → 1.0, Box 1 → 0.75, Box 2 → 0.5, Box 3 → 0.25.
+- **subtopicWeight** — dynamic per-session counter. First pick from a subtopic → 1.0; second → 0.5; third → 0.33. Updated after every pick so the penalty compounds immediately, spreading selection across subtopics rather than clustering on one.
 
-Higher `finalWeight` = more likely to be selected. The sampling loop uses weighted random selection without replacement — once a card is picked it's removed from the pool so it can't be selected twice.
-
----
-
-## Visit Tracking
-
-`visitCount` increments on every `POST /api/cards/:id/review`, regardless of Correct/Missed outcome. It's the total number of times the card has been rated across all sessions, and is displayed on the All Cards page and card detail modal.
+Sampling is without replacement — a picked item is removed from the pool.
 
 ---
 
-## All Cards Page
+## All PDF Notes Page
 
-- Paginated list (50 per page) with search, topic, subtopic, and difficulty filters.
-- Each row shows: title, due/weak badges, topic badge, difficulty badge, visit count (eye icon).
-- **Click any row** to open a detail modal showing all card content (question, approaches, notes), Leitner stats (box level / archived, visit count, last seen), and controls to flag weak or jump to edit.
-- Action buttons (edit, duplicate, delete) appear on hover and use `stopPropagation` so they don't open the modal.
-- Bulk import via JSON array, single JSON card import, and file-based import/export.
+- Paginated list (20 per page) with search, topic/subtopic filter dropdown, difficulty chips (Easy / Medium / Hard), box chips (Box 0–3), and a sort dropdown (newest / most viewed / most correct / most missed / pass rate / fail rate / box ascending / box descending).
+- Each card shows: section title · difficulty badge (color-coded) · ARCHIVED / DUE / WEAK badges · PDF filename · topic › subtopic badge · page range · **Box pill** (color-coded: grey/amber/green/blue for boxes 0–3) · views · ✓ got-it count · ✗ missed count · pass rate %.
+- Archived notes are dimmed and excluded from all review queues.
+- Hover for: edit · refresh (Drive only) · archive/unarchive toggle · delete.
 
 ---
 
 ## API Reference
 
-### Cards
+### Flashcards
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -289,16 +306,34 @@ Higher `finalWeight` = more likely to be selected. The sampling loop uses weight
 | POST | `/api/cards` | Create card |
 | PUT | `/api/cards/:id` | Update card |
 | DELETE | `/api/cards/:id` | Delete card |
-| POST | `/api/cards/:id/duplicate` | Duplicate card (resets box level, archived, lastReviewed) |
-| POST | `/api/cards/:id/review` | Rate card `{ rating: 'pass'\|'fail' }` — promotes/resets Leitner box |
+| POST | `/api/cards/:id/duplicate` | Duplicate card (resets box/archived/lastReviewed) |
+| POST | `/api/cards/:id/review` | Rate `{ rating: 'pass'\|'fail' }` |
 | POST | `/api/cards/:id/weak` | Toggle weak flag |
-| GET | `/api/cards/due` | Due, non-archived cards, sorted box 0 first |
+| GET | `/api/cards/due` | Due non-archived cards, box 0 first |
 | GET | `/api/cards/random?count=N` | Weighted random cards |
-| POST | `/api/cards/selective` | Pattern-focused cards (unseen/lesser-seen first) `{ topics, subtopics, count }` |
-| GET | `/api/cards/weak` | Weak cards sorted by box level |
-| GET | `/api/cards/topics` | All topics with their subtopics |
+| POST | `/api/cards/selective` | Pattern-focused `{ topics, subtopics, count }` |
+| GET | `/api/cards/weak` | Weak cards by box level |
+| GET | `/api/cards/topics` | All topics with subtopics |
 | GET | `/api/cards/export` | Full deck export |
 | POST | `/api/cards/import` | Bulk import `{ cards: [...] }` |
+
+### PDF Notes
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/pdf-notes` | All PDF note sections |
+| GET | `/api/pdf-notes/:id` | Single section |
+| POST | `/api/pdf-notes/upload` | Create from uploaded PDF (multipart, `pdf` field) |
+| POST | `/api/pdf-notes/drive` | Create from Google Drive link |
+| POST | `/api/pdf-notes/:id/refresh` | Re-download Drive PDF |
+| PUT | `/api/pdf-notes/:id` | Update section metadata |
+| DELETE | `/api/pdf-notes/:id` | Delete section (file removed if no other section uses it) |
+| GET | `/api/pdf-notes/sections/due` | Due sections, box 0 first |
+| GET | `/api/pdf-notes/sections/random?count=N` | Weighted random sections |
+| POST | `/api/pdf-notes/sections/selective` | Pattern-focused `{ topics, subtopics, count }` |
+| GET | `/api/pdf-notes/sections/weak` | Weak non-archived sections |
+| POST | `/api/pdf-notes/sections/:sectionId/review` | Rate section `{ rating: 'pass'\|'fail' }` |
+| POST | `/api/pdf-notes/sections/:sectionId/weak` | Toggle section weak flag |
 
 ### Stats
 
@@ -314,14 +349,26 @@ Stored in `localStorage` under `dsa_settings`.
 
 | Setting | Default | Description |
 |---|---|---|
-| `dailyTarget` | 20 | Max cards shown per Daily Review session |
+| `dailyTarget` | 20 | Max cards per Daily Review session |
+| `confirmDelete` | true | Require double-click to confirm deletes |
 
 ---
 
 ## Card Form
 
 - Form mode and JSON paste mode (toggle in the header).
-- Topics: built-in defaults + custom topics saved to `localStorage`.
-- Approaches: any number, any name, collapsible, drag handle (visual).
+- Topics: built-in DSA defaults + custom topics saved to `localStorage`.
+- Subtopics: creatable dropdown, saved to `localStorage`.
+- Approaches: any number, any name, collapsible, drag handle (visual only).
 - Draft auto-saved to `localStorage` for new cards; restored on next visit.
-- Legacy field migration: old cards with `brute`/`better`/`optimal` fields are automatically converted to the `approaches` array format on save.
+- Legacy field migration: old cards with `brute`/`better`/`optimal` fields are automatically converted to the `approaches` array on save.
+
+---
+
+## CreatableSelect Component
+
+Reusable dropdown (`components/ui/CreatableSelect.jsx`) used for Topic and Subtopic fields across flashcards and PDF notes.
+
+- Portals its dropdown to `document.body` so it escapes scroll/overflow containers (important inside modals).
+- Searches existing options; "Add new" row persists custom options to `localStorage` under the provided `storageKey`.
+- Re-reads `localStorage` on every open so sibling instances on the same page see each other's additions immediately.

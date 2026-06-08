@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useBlocker } from 'react-router-dom';
 import { ExternalLink, RotateCcw, CheckCircle2, Flag } from 'lucide-react';
 import { DifficultyBadge, TopicBadge } from './Badge.jsx';
 import CodeBlock from './CodeBlock.jsx';
@@ -47,6 +47,19 @@ export default function ReviewSession({ cards, onComplete, showRatings = true, t
   const [unlockedTabs, setUnlockedTabs] = useState(() => initialUnlocked(cards[0]));
   const [reviewed, setReviewed] = useState(0);
   const [done, setDone] = useState(false);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+
+  // Block in-app navigation while session is active
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    !done && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // Warn on browser close/refresh
+  useEffect(() => {
+    const handler = (e) => { if (!done) { e.preventDefault(); e.returnValue = ''; } };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [done]);
 
   const card = queue[idx];
   const total = queue.length;
@@ -95,9 +108,35 @@ export default function ReviewSession({ cards, onComplete, showRatings = true, t
     resetTabState(fresh[0]);
   };
 
+  const quitConfirmEl = (showQuitConfirm || blocker.state === 'blocked') && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-xl text-center space-y-4">
+        <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100">Quit session?</h2>
+        <p className="text-sm text-zinc-500">
+          Progress so far (<span className="font-bold text-zinc-700 dark:text-zinc-300">{reviewed}</span> reviewed) is already saved. Remaining cards won't be rated.
+        </p>
+        <div className="flex gap-3 justify-center pt-2">
+          <button
+            onClick={() => { blocker.reset?.(); setShowQuitConfirm(false); }}
+            className="px-5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+          >
+            Keep going
+          </button>
+          <button
+            onClick={() => { setShowQuitConfirm(false); if (blocker.state === 'blocked') { blocker.proceed(); } else if (onComplete) { onComplete(); } else { navigate('/flashcards'); } }}
+            className="px-5 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-colors"
+          >
+            Quit
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (done || queue.length === 0) {
     return (
       <div className="max-w-2xl mx-auto mt-24 text-center space-y-8 bg-white dark:bg-slate-900 p-12 rounded-3xl shadow-soft transition-colors duration-300">
+        {quitConfirmEl}
         {reviewed > 0 ? (
           <>
             <div className="w-24 h-24 bg-flat-green-500 rounded-full flex items-center justify-center mx-auto text-white shadow-soft">
@@ -134,10 +173,19 @@ export default function ReviewSession({ cards, onComplete, showRatings = true, t
 
   return (
     <div className="max-w-4xl mx-auto space-y-3">
+      {quitConfirmEl}
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{title}</h1>
-        <span className="text-xs font-extrabold text-slate-500 uppercase tracking-widest bg-slate-200 dark:bg-slate-800 px-3 py-1 rounded-full shadow-sm">{reviewed + 1} / {total}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-extrabold text-slate-500 uppercase tracking-widest bg-slate-200 dark:bg-slate-800 px-3 py-1 rounded-full shadow-sm">{reviewed + 1} / {total}</span>
+          <button
+            onClick={() => setShowQuitConfirm(true)}
+            className="text-xs font-bold text-zinc-400 hover:text-red-500 transition-colors uppercase tracking-wide"
+          >
+            Quit
+          </button>
+        </div>
       </div>
 
       {/* Progress */}
