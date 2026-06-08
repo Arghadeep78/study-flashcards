@@ -23,3 +23,20 @@ export const cardsApi = {
 export const statsApi = {
   get: () => api.get('/stats'),
 };
+
+export const pdfNotesApi = {
+  getAll: () => api.get('/pdf-notes'),
+  getOne: (id) => api.get(`/pdf-notes/${id}`),
+  createUpload: (formData) => api.post('/pdf-notes/upload', formData),
+  createDrive: (body) => api.post('/pdf-notes/drive', body),
+  refresh: (id) => api.post(`/pdf-notes/${id}/refresh`),
+  update: (id, body) => api.put(`/pdf-notes/${id}`, body),
+  remove: (id) => api.delete(`/pdf-notes/${id}`),
+  // Section review
+  getDueSections: () => api.get('/pdf-notes/sections/due'),
+  getRandomSections: (count) => api.get('/pdf-notes/sections/random', { params: { count } }),
+  getSelectiveSections: (body) => api.post('/pdf-notes/sections/selective', body),
+  getWeakSections: () => api.get('/pdf-notes/sections/weak'),
+  reviewSection: (sectionId, rating) => api.post(`/pdf-notes/sections/${sectionId}/review`, { rating }),
+  toggleSectionWeak: (sectionId) => api.post(`/pdf-notes/sections/${sectionId}/weak`),
+};

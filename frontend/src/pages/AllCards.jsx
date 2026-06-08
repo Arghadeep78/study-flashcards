@@ -269,7 +269,7 @@ export default function AllCards() {
           <Button onClick={exportCards}>
             <Download size={14} /> Export
           </Button>
-          <Button variant="primary" onClick={() => navigate('/cards/new')}>
+          <Button variant="primary" onClick={() => navigate('/flashcards/cards/new')}>
             <Plus size={14} /> New Card
           </Button>
           <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
@@ -337,7 +337,7 @@ export default function AllCards() {
               key={card._id}
               card={card}
               onView={() => setSelectedCard(card)}
-              onEdit={() => navigate(`/cards/${card._id}/edit`)}
+              onEdit={() => navigate(`/flashcards/cards/${card._id}/edit`)}
               onDelete={() => deleteCard(card._id)}
               onDuplicate={() => duplicateCard(card._id)}
             />

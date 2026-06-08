@@ -403,7 +403,7 @@ export default function CardForm() {
     try {
       if (isEdit) await updateCard(id, payload);
       else { await createCard(payload); clearDraft(); }
-      navigate('/cards');
+      navigate('/flashcards');
     } catch (err) {
       toast.error(err.response?.data?.error ?? 'Failed to save');
     } finally {
