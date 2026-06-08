@@ -234,7 +234,7 @@ export const getRandomCards = async (req, res) => {
 export const getSelectiveCards = async (req, res) => {
   try {
     const { topics, subtopics, count } = req.body;
-    const match = { archived: false };
+    const match = {};
     if (topics?.length) match.topic = { $in: topics };
     if (subtopics?.length) match.subtopic = { $in: subtopics };
 
